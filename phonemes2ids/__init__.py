@@ -1,9 +1,12 @@
+import functools
 import itertools
 import logging
+import operator
 import typing
 import unicodedata
 
-from .const import PUNCTUATION_MAP, STRESS, BlankBetween
+from .const import PUNCTUATION_MAP, BlankBetween
+from .utils import partition
 
 _LOGGER = logging.getLogger("phoneme_ids")
 
@@ -20,9 +23,9 @@ def phonemes2ids(
     blank_between: typing.Union[str, BlankBetween] = BlankBetween.WORDS,
     simple_punctuation: bool = False,
     punctuation_map: typing.Optional[typing.Mapping[str, str]] = None,
-    separate_stress: bool = False,
-    stress: typing.Optional[typing.Collection[str]] = None,
+    separate: typing.Optional[typing.Collection[str]] = None,
     separate_graphemes: bool = False,
+    separate_tones: bool = False,
     phoneme_map: typing.Optional[typing.Mapping[str, str]] = None,
 ) -> typing.List[int]:
     if phoneme_map is None:
@@ -35,10 +38,9 @@ def phonemes2ids(
 
     assert punctuation_map is not None
 
-    if stress is None:
-        stress = STRESS
-
-    assert stress is not None
+    is_separate: typing.Optional[typing.Callable[[str], bool]] = None
+    if separate:
+        is_separate = functools.partial(operator.contains, separate)
 
     blank_id: typing.Optional[int] = None
     if blank:
@@ -56,7 +58,7 @@ def phonemes2ids(
         word_phoneme_ids.append([blank_id])
 
     for word in word_phonemes:
-        word_ids = []
+        word_ids: typing.List[int] = []
 
         if separate_graphemes:
             word = list(
@@ -66,18 +68,49 @@ def phonemes2ids(
             )
 
         for phoneme in word:
-            if separate_stress and stress:
-                # Split stress out
-                while phoneme and (phoneme[0] in stress):
-                    stress_phoneme = phoneme_map.get(phoneme[0], phoneme[0])
-                    word_ids.append(phoneme_to_id[stress_phoneme])
-                    phoneme = phoneme[1:]
+            if separate_tones:
+                # Separate tones (digits at the end of a phoneme)
+                tone = []
 
-            if phoneme:
+                # Strip digits off the back of the phoneme (reversed)
+                while phoneme and phoneme[-1].isdigit():
+                    tone.append(phoneme[-1])
+                    phoneme = phoneme[:-1]
+
+                if tone:
+                    tone = "".join(reversed(tone))
+                    word_ids.append(phoneme_to_id[tone])
+
+            if is_separate is None:
+                # No more splitting
+                sub_phonemes = [phoneme]
+            else:
+                # Separate out stress, etc.
+                sub_phonemes = []
+
+                before_split = ""
+                for codepoint in phoneme:
+                    if codepoint in separate:
+                        # Split here
+                        if before_split:
+                            sub_phonemes.append(before_split)
+                            before_split = ""
+
+                        sub_phonemes.append(codepoint)
+                    else:
+                        before_split += codepoint
+
+                if before_split:
+                    sub_phonemes.append(before_split)
+
+            for sub_phoneme in sub_phonemes:
+                if not sub_phoneme:
+                    continue
+
                 if simple_punctuation and punctuation_map:
-                    phoneme = punctuation_map.get(phoneme, phoneme)
+                    sub_phoneme = punctuation_map.get(sub_phoneme, sub_phoneme)
 
-                to_phonemes = phoneme_map.get(phoneme)
+                to_phonemes = phoneme_map.get(sub_phoneme)
                 if to_phonemes:
                     # Mapped to one or more phonemes
                     word_ids.extend(
@@ -85,7 +118,7 @@ def phonemes2ids(
                     )
                 else:
                     # No map
-                    word_ids.append(phoneme_to_id[phoneme])
+                    word_ids.append(phoneme_to_id[sub_phoneme])
 
         if word_ids:
             if blank_id is None:
@@ -127,9 +160,9 @@ def learn_phoneme_ids(
     all_phoneme_counts: typing.Optional[typing.Counter[str]] = None,
     simple_punctuation: bool = False,
     punctuation_map: typing.Optional[typing.Mapping[str, str]] = None,
-    separate_stress: bool = False,
-    stress: typing.Optional[typing.Collection[str]] = None,
+    separate: typing.Optional[typing.Collection[str]] = None,
     separate_graphemes: bool = False,
+    separate_tones: bool = False,
     phoneme_map: typing.Optional[typing.Mapping[str, str]] = None,
 ):
     if phoneme_map is None:
@@ -138,8 +171,9 @@ def learn_phoneme_ids(
     if punctuation_map is None:
         punctuation_map = PUNCTUATION_MAP
 
-    if stress is None:
-        stress = STRESS
+    is_separate: typing.Optional[typing.Callable[[str], bool]] = None
+    if separate:
+        is_separate = functools.partial(operator.contains, separate)
 
     for word in word_phonemes:
         if separate_graphemes:
@@ -150,16 +184,51 @@ def learn_phoneme_ids(
             )
 
         for phoneme in word:
-            if separate_stress:
-                # Split stress out
-                while phoneme and (phoneme[0] in stress):
-                    phoneme = phoneme[1:]
+            if separate_tones:
+                # Separate tones (digits at the end of a phoneme)
+                tone = []
 
-            if phoneme:
+                # Strip digits off the back of the phoneme (reversed)
+                while phoneme and phoneme[-1].isdigit():
+                    tone.append(phoneme[-1])
+                    phoneme = phoneme[:-1]
+
+                if tone:
+                    tone = "".join(reversed(tone))
+                    all_phonemes.add(tone)
+                    if all_phoneme_counts is not None:
+                        all_phoneme_counts[tone] += 1
+
+            if is_separate is None:
+                # No more splitting
+                sub_phonemes = [phoneme]
+            else:
+                # Separate out stress, etc.
+                sub_phonemes = []
+
+                before_split = ""
+                for codepoint in phoneme:
+                    if codepoint in separate:
+                        # Split here
+                        if before_split:
+                            sub_phonemes.append(before_split)
+                            before_split = ""
+
+                        sub_phonemes.append(codepoint)
+                    else:
+                        before_split += codepoint
+
+                if before_split:
+                    sub_phonemes.append(before_split)
+
+            for sub_phoneme in sub_phonemes:
+                if not sub_phoneme:
+                    continue
+
                 if simple_punctuation:
-                    phoneme = punctuation_map.get(phoneme, phoneme)
+                    sub_phoneme = punctuation_map.get(sub_phoneme, sub_phoneme)
 
-                to_phonemes = phoneme_map.get(phoneme)
+                to_phonemes = phoneme_map.get(sub_phoneme)
                 if to_phonemes:
                     # Mapped to one or more phonemes
                     for to_phoneme in to_phonemes:
@@ -169,7 +238,7 @@ def learn_phoneme_ids(
                             all_phoneme_counts[to_phoneme] += 1
                 else:
                     # No map
-                    all_phonemes.add(phoneme)
+                    all_phonemes.add(sub_phoneme)
 
                     if all_phoneme_counts is not None:
-                        all_phoneme_counts[phoneme] += 1
+                        all_phoneme_counts[sub_phoneme] += 1

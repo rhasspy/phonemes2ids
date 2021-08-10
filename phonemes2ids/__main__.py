@@ -78,7 +78,17 @@ def main():
     parser.add_argument(
         "--separate-graphemes",
         action="store_true",
-        help="Break apart graphemes into individual codepoints",
+        help="Break apart graphemes into individual codepoints for phonemes",
+    )
+    parser.add_argument(
+        "--separate-tones",
+        action="store_true",
+        help="Break apart tones (digits at the end of a phoneme) into individual phonemes",
+    )
+    parser.add_argument(
+        "--separate",
+        action="append",
+        help="Break apart provided grapheme into separate phoneme",
     )
     parser.add_argument(
         "--write-phoneme-counts", help="Path to write phoneme counts observed in input"
@@ -138,9 +148,14 @@ def main():
         # Add blank symbol
         phoneme_to_id[args.blank] = len(phoneme_to_id)
 
+    separate: typing.Set[str] = set()
+    if args.separate:
+        separate.update(args.separate)
+
     if args.separate_stress:
         # Add stress symbols
         for stress in sorted(STRESS):
+            separate.add(stress)
             if stress not in phoneme_to_id:
                 phoneme_to_id[stress] = len(phoneme_to_id)
 
@@ -194,8 +209,9 @@ def main():
             all_phonemes,
             all_phoneme_counts=all_phoneme_counts,
             simple_punctuation=args.simple_punctuation,
-            separate_stress=args.separate_stress,
+            separate=separate,
             separate_graphemes=args.separate_graphemes,
+            separate_tones=args.separate_tones,
             phoneme_map=phoneme_map,
         )
 
@@ -222,8 +238,9 @@ def main():
             blank=args.blank,
             blank_between=args.blank_between,
             simple_punctuation=args.simple_punctuation,
-            separate_stress=args.separate_stress,
+            separate=separate,
             separate_graphemes=args.separate_graphemes,
+            separate_tones=args.separate_tones,
             phoneme_map=phoneme_map,
         )
 
