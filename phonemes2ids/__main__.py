@@ -76,6 +76,11 @@ def main():
         help="Add phoneme to consider as stress (overwrites default of ˈˌ)",
     )
     parser.add_argument(
+        "--separate-graphemes",
+        action="store_true",
+        help="Break apart graphemes into individual codepoints",
+    )
+    parser.add_argument(
         "--write-phoneme-counts", help="Path to write phoneme counts observed in input"
     )
     parser.add_argument(
@@ -132,15 +137,6 @@ def main():
     if args.blank and (args.blank not in phoneme_to_id):
         # Add blank symbol
         phoneme_to_id[args.blank] = len(phoneme_to_id)
-
-    # if args.blank:
-    #     if args.blank not:
-    #         phoneme_to_id[args.word_separator] = len(phoneme_to_id)
-
-    #     word_sep_id = phoneme_to_id[args.word_separator]
-    #     word_sep_str = f" {word_sep_id} "
-    # else:
-    #     word_sep_str = args.word_separator
 
     if args.separate_stress:
         # Add stress symbols
@@ -199,6 +195,7 @@ def main():
             all_phoneme_counts=all_phoneme_counts,
             simple_punctuation=args.simple_punctuation,
             separate_stress=args.separate_stress,
+            separate_graphemes=args.separate_graphemes,
             phoneme_map=phoneme_map,
         )
 
@@ -226,6 +223,7 @@ def main():
             blank_between=args.blank_between,
             simple_punctuation=args.simple_punctuation,
             separate_stress=args.separate_stress,
+            separate_graphemes=args.separate_graphemes,
             phoneme_map=phoneme_map,
         )
 

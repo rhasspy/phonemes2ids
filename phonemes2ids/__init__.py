@@ -1,6 +1,7 @@
 import itertools
 import logging
 import typing
+import unicodedata
 
 from .const import PUNCTUATION_MAP, STRESS, BlankBetween
 
@@ -21,6 +22,7 @@ def phonemes2ids(
     punctuation_map: typing.Optional[typing.Mapping[str, str]] = None,
     separate_stress: bool = False,
     stress: typing.Optional[typing.Collection[str]] = None,
+    separate_graphemes: bool = False,
     phoneme_map: typing.Optional[typing.Mapping[str, str]] = None,
 ) -> typing.List[int]:
     if phoneme_map is None:
@@ -55,6 +57,14 @@ def phonemes2ids(
 
     for word in word_phonemes:
         word_ids = []
+
+        if separate_graphemes:
+            word = list(
+                itertools.chain.from_iterable(
+                    unicodedata.normalize("NFD", p) for p in word
+                )
+            )
+
         for phoneme in word:
             if separate_stress and stress:
                 # Split stress out
@@ -119,6 +129,7 @@ def learn_phoneme_ids(
     punctuation_map: typing.Optional[typing.Mapping[str, str]] = None,
     separate_stress: bool = False,
     stress: typing.Optional[typing.Collection[str]] = None,
+    separate_graphemes: bool = False,
     phoneme_map: typing.Optional[typing.Mapping[str, str]] = None,
 ):
     if phoneme_map is None:
@@ -131,6 +142,13 @@ def learn_phoneme_ids(
         stress = STRESS
 
     for word in word_phonemes:
+        if separate_graphemes:
+            word = list(
+                itertools.chain.from_iterable(
+                    unicodedata.normalize("NFD", p) for p in word
+                )
+            )
+
         for phoneme in word:
             if separate_stress:
                 # Split stress out
