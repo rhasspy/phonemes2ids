@@ -130,7 +130,7 @@ def main():
         # Load from phonemes file
         # Format is ID<space>PHONEME
         with open(args.read_phonemes, "r") as phonemes_file:
-            load_phoneme_ids(phonemes_file)
+            phoneme_to_id.update(load_phoneme_ids(phonemes_file))
 
     if args.pad and (args.pad not in phoneme_to_id):
         # Add pad symbol

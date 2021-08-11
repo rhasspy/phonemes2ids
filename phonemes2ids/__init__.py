@@ -5,8 +5,8 @@ import operator
 import typing
 import unicodedata
 
-from .const import PUNCTUATION_MAP, BlankBetween
-from .utils import partition
+from .const import PUNCTUATION_MAP, BlankBetween, STRESS
+from .utils import partition, load_phoneme_ids, load_phoneme_map
 
 _LOGGER = logging.getLogger("phoneme_ids")
 
@@ -27,6 +27,9 @@ def phonemes2ids(
     separate_graphemes: bool = False,
     separate_tones: bool = False,
     phoneme_map: typing.Optional[typing.Mapping[str, str]] = None,
+    missing_func: typing.Optional[
+        typing.Callable[[str], typing.Optional[typing.List[int]]]
+    ] = None,
 ) -> typing.List[int]:
     if phoneme_map is None:
         phoneme_map = {}
@@ -49,9 +52,30 @@ def phonemes2ids(
     # Transform into phoneme ids
     word_phoneme_ids = []
 
+    def maybe_extend_ids(
+        phoneme: str, target: typing.List[int], append_list: bool = True
+    ):
+        if not phoneme:
+            return
+
+        maybe_id = phoneme_to_id.get(phoneme)
+        if maybe_id is not None:
+            if append_list:
+                maybe_id = [maybe_id]
+            target.append(maybe_id)
+            return
+
+        if missing_func is not None:
+            maybe_ids = missing_func(phoneme)
+            if maybe_ids:
+                if append_list:
+                    target.append(maybe_ids)
+                else:
+                    target.extend(maybe_ids)
+
     # Add beginning-of-sentence symbol
     if bos:
-        word_phoneme_ids.append([phoneme_to_id[bos]])
+        maybe_extend_ids(bos, word_phoneme_ids)
 
     if blank_id is not None:
         # Blank token
@@ -79,7 +103,7 @@ def phonemes2ids(
 
                 if tone:
                     tone = "".join(reversed(tone))
-                    word_ids.append(phoneme_to_id[tone])
+                    maybe_extend_ids(tone)
 
             if is_separate is None:
                 # No more splitting
@@ -113,12 +137,11 @@ def phonemes2ids(
                 to_phonemes = phoneme_map.get(sub_phoneme)
                 if to_phonemes:
                     # Mapped to one or more phonemes
-                    word_ids.extend(
-                        (phoneme_to_id[to_phoneme] for to_phoneme in to_phonemes)
-                    )
+                    for to_phoneme in to_phonemes:
+                        maybe_extend_ids(to_phoneme, word_ids, append_list=False)
                 else:
                     # No map
-                    word_ids.append(phoneme_to_id[sub_phoneme])
+                    maybe_extend_ids(sub_phoneme, word_ids, append_list=False)
 
         if word_ids:
             if blank_id is None:
@@ -146,7 +169,7 @@ def phonemes2ids(
 
     # Add end-of-sentence symbol
     if eos:
-        word_phoneme_ids.append([phoneme_to_id[eos]])
+        maybe_extend_ids(eos, word_phoneme_ids)
 
     return list(itertools.chain.from_iterable(word_phoneme_ids))
 
