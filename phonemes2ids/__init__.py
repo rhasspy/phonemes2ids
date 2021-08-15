@@ -103,7 +103,7 @@ def phonemes2ids(
 
                 if tone:
                     tone = "".join(reversed(tone))
-                    maybe_extend_ids(tone)
+                    maybe_extend_ids(tone, word_ids, append_list=False)
 
             if is_separate is None:
                 # No more splitting
