@@ -26,7 +26,7 @@ def phonemes2ids(
     separate: typing.Optional[typing.Collection[str]] = None,
     separate_graphemes: bool = False,
     separate_tones: bool = False,
-    phoneme_map: typing.Optional[typing.Mapping[str, str]] = None,
+    phoneme_map: typing.Optional[typing.Mapping[str, typing.Sequence[str]]] = None,
     missing_func: typing.Optional[
         typing.Callable[[str], typing.Optional[typing.List[int]]]
     ] = None,
