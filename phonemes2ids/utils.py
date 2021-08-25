@@ -1,9 +1,19 @@
-import itertools
+"""Utility methods for phonemes2ids"""
 import typing
 
 
 def load_phoneme_ids(phonemes_file: typing.TextIO) -> typing.Dict[str, int]:
-    # Format is ID<space>PHONEME
+    """
+    Load phoneme id mapping from a text file.
+    Format is ID<space>PHONEME
+    Comments start with #
+
+    Args:
+        phonemes_file: text file
+
+    Returns:
+        dict with phoneme -> id
+    """
     phoneme_to_id = {}
     for line in phonemes_file:
         line = line.strip("\r\n")
@@ -20,7 +30,17 @@ def load_phoneme_ids(phonemes_file: typing.TextIO) -> typing.Dict[str, int]:
 def load_phoneme_map(
     phoneme_map_file: typing.TextIO,
 ) -> typing.Dict[str, typing.List[str]]:
-    # Format is FROM_PHONEME<space>TO_PHONEME
+    """
+    Load phoneme/phoneme mapping from a text file.
+    Format is FROM_PHONEME<space>TO_PHONEME[<space>TO_PHONEME...]
+    Comments start with #
+
+    Args:
+        phoneme_map_file: text file
+
+    Returns:
+        dict with from_phoneme -> [to_phoneme, to_phoneme, ...]
+    """
     phoneme_map = {}
     for line in phoneme_map_file:
         line = line.strip("\r\n")
@@ -37,10 +57,3 @@ def load_phoneme_map(
             phoneme_map[from_phoneme] = to_phonemes_str.split()
 
     return phoneme_map
-
-
-def partition(pred, iterable):
-    "Use a predicate to partition entries into false entries and true entries"
-    # partition(is_odd, range(10)) --> 0 2 4 6 8   and  1 3 5 7 9
-    t1, t2 = itertools.tee(iterable)
-    return itertools.filterfalse(pred, t1), filter(pred, t2)

@@ -1,3 +1,4 @@
+"""Command-line interface to phonemes2ids"""
 import argparse
 import csv
 import logging

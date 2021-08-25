@@ -1,3 +1,4 @@
+"""Tools for mapping phonemes to integer ids"""
 import functools
 import itertools
 import logging
@@ -5,10 +6,13 @@ import operator
 import typing
 import unicodedata
 
-from .const import PUNCTUATION_MAP, BlankBetween, STRESS
-from .utils import partition, load_phoneme_ids, load_phoneme_map
+from .const import PUNCTUATION_MAP, STRESS, BlankBetween
+from .utils import load_phoneme_ids, load_phoneme_map
 
 _LOGGER = logging.getLogger("phoneme_ids")
+
+ID_LIST = typing.List[int]
+WORD_ID_LIST = typing.List[ID_LIST]
 
 # -----------------------------------------------------------------------------
 
@@ -33,7 +37,32 @@ def phonemes2ids(
     missing_func: typing.Optional[
         typing.Callable[[str], typing.Optional[typing.List[int]]]
     ] = None,
-) -> typing.List[int]:
+) -> ID_LIST:
+    """
+    Convert word-separated phonemes into integer ids.
+
+    Args:
+        word_phonemes: list of word phonemes, each a list of strings
+        phoneme_to_id: map from phoneme to integer id
+        pad: phoneme for padding vectors (currently unused)
+        bos: phoneme to put at beginning of id list
+        eos: phoneme to put at end of id list
+        blank: phoneme to add between words or tokens
+        blank_between: controls where blank tokens are inserted (see const.BlankBetween)
+        blank_at_start: True if blank should also be inserted before first word/token
+        blank_at_end: True if blank should also be inserted after last word/token
+        simple_punctuation: True if punctuation should be simplified according to punctuation_map (see const.PUNCTUATION_MAP)
+        punctuation_map: map from phoneme to phoneme, used when simple_punctuation is True
+        separate: collection of phonemes that should be separated out into distinct phonemes (see const.STRESS)
+        separate_graphemes: True if graphemes should be decomposed into codepoints as distinct phonemes
+        separate_tones: True if digits at the end of phonemes (tones) should be separated out into distinct phonemes
+        tone_before: True if tones separated out are inserted before their corresponding phoneme instead of after
+        phoneme_map: optional map from phoneme to phoneme sequence (used after simplification/separation)
+        missing_func: function called when phoneme is missing from phoneme_to_id map (str -> [int])
+
+    Returns:
+        ids - flat list of integer ids
+    """
     if phoneme_map is None:
         phoneme_map = {}
 
@@ -53,10 +82,12 @@ def phonemes2ids(
         blank_id = phoneme_to_id[blank]
 
     # Transform into phoneme ids
-    word_phoneme_ids = []
+    word_phoneme_ids: WORD_ID_LIST = []
 
     def maybe_extend_ids(
-        phoneme: str, target: typing.List[int], append_list: bool = True
+        phoneme: str,
+        target: typing.Union[ID_LIST, WORD_ID_LIST],
+        append_list: bool = True,
     ):
         if not phoneme:
             return
@@ -64,17 +95,18 @@ def phonemes2ids(
         maybe_id = phoneme_to_id.get(phoneme)
         if maybe_id is not None:
             if append_list:
-                maybe_id = [maybe_id]
-            target.append(maybe_id)
+                typing.cast(WORD_ID_LIST, target).append([maybe_id])
+            else:
+                typing.cast(ID_LIST, target).append(maybe_id)
             return
 
         if missing_func is not None:
             maybe_ids = missing_func(phoneme)
             if maybe_ids:
                 if append_list:
-                    target.append(maybe_ids)
+                    typing.cast(WORD_ID_LIST, target).append(maybe_ids)
                 else:
-                    target.extend(maybe_ids)
+                    typing.cast(ID_LIST, target).extend(maybe_ids)
 
     # Add beginning-of-sentence symbol
     if bos:
@@ -119,6 +151,7 @@ def phonemes2ids(
                 sub_phonemes = [phoneme]
             else:
                 # Separate out stress, etc.
+                assert separate is not None
                 sub_phonemes = []
 
                 before_split = ""
@@ -213,6 +246,23 @@ def learn_phoneme_ids(
     separate_tones: bool = False,
     phoneme_map: typing.Optional[typing.Mapping[str, str]] = None,
 ):
+    """
+    Discover phonemes from examples.
+
+    Args:
+        word_phonemes: list of word phonemes, each a list of strings
+        all_phonemes: set of distinct phonemes found (modified by function)
+        all_phoneme_counts: optional Counter with observed phoneme counts (modified by function)
+        simple_punctuation: True if punctuation should be simplified according to punctuation_map (see const.PUNCTUATION_MAP)
+        punctuation_map: map from phoneme to phoneme, used when simple_punctuation is True
+        separate: collection of phonemes that should be separated out into distinct phonemes (see const.STRESS)
+        separate_graphemes: True if graphemes should be decomposed into codepoints as distinct phonemes
+        separate_tones: True if digits at the end of phonemes (tones) should be separated out into distinct phonemes
+        phoneme_map: optional map from phoneme to phoneme sequence (used after simplification/separation)
+
+    Returns:
+        None - all_phonemes and all_phoneme_counts are modified
+    """
     if phoneme_map is None:
         phoneme_map = {}
 
@@ -234,15 +284,15 @@ def learn_phoneme_ids(
         for phoneme in word:
             if separate_tones:
                 # Separate tones (digits at the end of a phoneme)
-                tone = []
+                tone_chars = []
 
                 # Strip digits off the back of the phoneme (reversed)
                 while phoneme and phoneme[-1].isdigit():
-                    tone.append(phoneme[-1])
+                    tone_chars.append(phoneme[-1])
                     phoneme = phoneme[:-1]
 
-                if tone:
-                    tone = "".join(reversed(tone))
+                if tone_chars:
+                    tone = "".join(reversed(tone_chars))
                     all_phonemes.add(tone)
                     if all_phoneme_counts is not None:
                         all_phoneme_counts[tone] += 1
@@ -252,6 +302,7 @@ def learn_phoneme_ids(
                 sub_phonemes = [phoneme]
             else:
                 # Separate out stress, etc.
+                assert separate is not None
                 sub_phonemes = []
 
                 before_split = ""
