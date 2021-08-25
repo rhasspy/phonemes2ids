@@ -21,11 +21,14 @@ def phonemes2ids(
     eos: typing.Optional[str] = None,
     blank: typing.Optional[str] = None,
     blank_between: typing.Union[str, BlankBetween] = BlankBetween.WORDS,
+    blank_at_start: bool = True,
+    blank_at_end: bool = True,
     simple_punctuation: bool = False,
     punctuation_map: typing.Optional[typing.Mapping[str, str]] = None,
     separate: typing.Optional[typing.Collection[str]] = None,
     separate_graphemes: bool = False,
     separate_tones: bool = False,
+    tone_before: bool = False,
     phoneme_map: typing.Optional[typing.Mapping[str, typing.Sequence[str]]] = None,
     missing_func: typing.Optional[
         typing.Callable[[str], typing.Optional[typing.List[int]]]
@@ -77,11 +80,12 @@ def phonemes2ids(
     if bos:
         maybe_extend_ids(bos, word_phoneme_ids)
 
-    if blank_id is not None:
-        # Blank token
+    if (blank_id is not None) and blank_at_start:
+        # Blank token at start
         word_phoneme_ids.append([blank_id])
 
-    for word in word_phonemes:
+    last_word_idx = len(word_phonemes) - 1
+    for word_idx, word in enumerate(word_phonemes):
         word_ids: typing.List[int] = []
 
         if separate_graphemes:
@@ -92,17 +96,22 @@ def phonemes2ids(
             )
 
         for phoneme in word:
+            tone = ""
+
             if separate_tones:
                 # Separate tones (digits at the end of a phoneme)
-                tone = []
+                tone_chars = []
 
                 # Strip digits off the back of the phoneme (reversed)
                 while phoneme and phoneme[-1].isdigit():
-                    tone.append(phoneme[-1])
+                    tone_chars.append(phoneme[-1])
                     phoneme = phoneme[:-1]
 
-                if tone:
-                    tone = "".join(reversed(tone))
+                if tone_chars:
+                    tone = "".join(reversed(tone_chars))
+
+                if tone and tone_before:
+                    # Insert tone before corresponding phoneme
                     maybe_extend_ids(tone, word_ids, append_list=False)
 
             if is_separate is None:
@@ -143,27 +152,43 @@ def phonemes2ids(
                     # No map
                     maybe_extend_ids(sub_phoneme, word_ids, append_list=False)
 
+            if tone and (not tone_before):
+                # Insert tone after corresponding phoneme
+                maybe_extend_ids(tone, word_ids, append_list=False)
+
         if word_ids:
             if blank_id is None:
                 # No blank phoneme
                 word_phoneme_ids.append(word_ids)
             elif blank_between == BlankBetween.TOKENS:
                 # Blank phoneme between each token
+                num_blanks = len(word_ids)
                 word_phoneme_ids.append(
                     list(
                         # [p, blank, p, blank, ...]
                         itertools.chain.from_iterable(
                             # ((p, blank), (p, blank), ...)
                             itertools.zip_longest(
-                                word_ids, itertools.repeat(blank_id, len(word_ids))
+                                word_ids, itertools.repeat(blank_id, num_blanks)
                             )
                         )
                     )
                 )
+
+                if (
+                    (word_idx == last_word_idx)
+                    and (not blank_at_end)
+                    and word_phoneme_ids[-1]
+                ):
+                    # Drop last blank
+                    word_phoneme_ids[-1].pop()
+
             elif blank_between == BlankBetween.WORDS:
                 # Blank phoneme between each word (list of tokens)
                 word_phoneme_ids.append(word_ids)
-                word_phoneme_ids.append([blank_id])
+
+                if (word_idx != last_word_idx) or blank_at_end:
+                    word_phoneme_ids.append([blank_id])
             else:
                 raise ValueError(f"Unexpected value for blank_between: {blank_between}")
 
