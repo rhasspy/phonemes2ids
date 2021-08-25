@@ -3,3 +3,6 @@ __pycache__/
 *.egg-info/
 /build/
 /.venv/
+.coverage
+coverage.xml
+/dist/
