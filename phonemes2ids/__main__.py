@@ -46,6 +46,16 @@ def main():
         help="Where to insert blank phoneme (default: words)",
     )
     parser.add_argument(
+        "--no-blank-start",
+        action="store_true",
+        help="Don't insert a blank token before the first word/token",
+    )
+    parser.add_argument(
+        "--no-blank-end",
+        action="store_true",
+        help="Don't insert a blank token after the last word/token",
+    )
+    parser.add_argument(
         "--simple-punctuation",
         action="store_true",
         help="Map all punctuation into ',' and '.'",
@@ -87,6 +97,11 @@ def main():
         help="Break apart tones (digits at the end of a phoneme) into individual phonemes",
     )
     parser.add_argument(
+        "--tone-before",
+        action="store_true",
+        help="Insert separated tones before their corresponding phoneme instead of after",
+    )
+    parser.add_argument(
         "--separate",
         action="append",
         help="Break apart provided grapheme into separate phoneme",
@@ -105,9 +120,25 @@ def main():
         "--phoneme-map",
         help="Path to text file with FROM_PHONEME TO_PHONEME on each line",
     )
+    parser.add_argument("--version", action="store_true", help="Print version and exit")
+    parser.add_argument(
+        "--debug", action="store_true", help="Print DEBUG messages to the console"
+    )
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.INFO)
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
+    # -------------------------------------------------------------------------
+
+    if args.version:
+        # Print version and exit
+        from . import __version__
+
+        print(__version__)
+        sys.exit(0)
 
     # Map from observed phoneme to desired phonemes(s)
     phoneme_map: typing.Dict[str, typing.List[str]] = {}
@@ -238,10 +269,13 @@ def main():
             eos=args.eos,
             blank=args.blank,
             blank_between=args.blank_between,
+            blank_at_start=(not args.no_blank_start),
+            blank_at_end=(not args.no_blank_end),
             simple_punctuation=args.simple_punctuation,
             separate=separate,
             separate_graphemes=args.separate_graphemes,
             separate_tones=args.separate_tones,
+            tone_before=args.tone_before,
             phoneme_map=phoneme_map,
         )
 

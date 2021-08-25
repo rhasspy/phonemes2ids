@@ -30,6 +30,11 @@ setuptools.setup(
     url="https://github.com/rhasspy/phonemes2ids",
     packages=setuptools.find_packages(),
     package_data={"phonemes2ids": ["VERSION", "py.typed"]},
+    entry_points={
+        "console_scripts": [
+            "phonemes2ids = phonemes2ids.__main__:main",
+        ]
+    },
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",

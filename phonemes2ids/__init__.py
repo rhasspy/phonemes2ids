@@ -5,14 +5,18 @@ import logging
 import operator
 import typing
 import unicodedata
+from pathlib import Path
 
 from .const import PUNCTUATION_MAP, STRESS, BlankBetween
 from .utils import load_phoneme_ids, load_phoneme_map
 
 _LOGGER = logging.getLogger("phoneme_ids")
+_DIR = Path(__file__).parent
 
 ID_LIST = typing.List[int]
 WORD_ID_LIST = typing.List[ID_LIST]
+
+__version__ = (_DIR / "VERSION").read_text().strip()
 
 # -----------------------------------------------------------------------------
 
