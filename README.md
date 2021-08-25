@@ -237,11 +237,11 @@ where `a` is 0, `b` is 1, and `ː` is 2.
 
 If you only care about short and long pauses in a sentence, the `--simple-punctuation` flag is for you! It replaces common punctuation symbols with either `,` (short pause) or `.` (long pause):
 
-sh
+```sh
 echo ', . : ; ! ?' | \
     phonemes2ids --simple-punctuation
 0 1 0 0 1 1
-``
+```
 
 where `,` is 0 and `.` is 1. Use `--phoneme-map` for more control.
 
@@ -268,7 +268,7 @@ Once you've figured out all of your settings, it's time to convert some input da
 ```sh
 phonemes2ids --read-phonemes phonemes.txt \
              --phoneme-map map.txt \
-             <other settings> \
+             [other settings] \
              < input_phonemes.txt \
              > output_ids.txt
 ```
