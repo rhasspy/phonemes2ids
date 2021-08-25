@@ -213,7 +213,7 @@ echo 'ɑ̃' | \
 0 1
 ```
 
-where U+0251 (ɑ) is 0 and U+0303 (nasal) is 1.
+where U+0251 (`ɑ`) is 0 and U+0303 (nasal) is 1.
 
 Specifying the exact graphemes to separate out is done with `--separate <string>` (one or more times):
 
@@ -223,7 +223,7 @@ echo 'aː' | \
 0 1
 ```
 
-where "a" is 0 and "ː" is 1. If the separator occurs in the middle of a phoneme, the phoneme is split into three parts (before, separator, after):
+where `a` is 0 and `ː` is 1. If the separator occurs in the middle of a phoneme, the phoneme is split into three parts (before, separator, after):
 
 ```sh
 echo 'aːb' | \
@@ -231,19 +231,19 @@ echo 'aːb' | \
 0 2 1
 ```
 
-where "a" is 0, b is 1, and "ː" is 2.
+where `a` is 0, `b` is 1, and `ː` is 2.
 
 ### Punctuation Simplification
 
-If you only care about short and long pauses in a sentence, the `--simple-punctuation` flag is for you! It replaces common punctuation symbols with either "," (short pause) or "." (long pause):
+If you only care about short and long pauses in a sentence, the `--simple-punctuation` flag is for you! It replaces common punctuation symbols with either `,` (short pause) or `.` (long pause):
 
-```sh
+sh
 echo ', . : ; ! ?' | \
     phonemes2ids --simple-punctuation
 0 1 0 0 1 1
-```
+``
 
-where "," is 0 and "." is 1. Use `--phoneme-map` for more control.
+where `,` is 0 and `.` is 1. Use `--phoneme-map` for more control.
 
 ---
 
