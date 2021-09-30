@@ -311,7 +311,7 @@ def learn_phoneme_ids(
 
                 before_split = ""
                 for codepoint in phoneme:
-                    if codepoint in separate:
+                    if is_separate(codepoint):
                         # Split here
                         if before_split:
                             sub_phonemes.append(before_split)

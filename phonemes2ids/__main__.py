@@ -143,7 +143,7 @@ def main():
     # Map from observed phoneme to desired phonemes(s)
     phoneme_map: typing.Dict[str, typing.List[str]] = {}
     if args.phoneme_map:
-        with open(args.phoneme_map, "r") as phoneme_map_file:
+        with open(args.phoneme_map, "r", encoding="utf-8") as phoneme_map_file:
             phoneme_map = load_phoneme_map(phoneme_map_file)
 
     if args.map:
@@ -161,7 +161,7 @@ def main():
     if args.read_phonemes:
         # Load from phonemes file
         # Format is ID<space>PHONEME
-        with open(args.read_phonemes, "r") as phonemes_file:
+        with open(args.read_phonemes, "r", encoding="utf-8") as phonemes_file:
             phoneme_to_id.update(load_phoneme_ids(phonemes_file))
 
     if args.pad and (args.pad not in phoneme_to_id):
@@ -304,7 +304,7 @@ def main():
             write_phoneme_ids(phoneme_to_id)
         else:
             # Write to file
-            with open(args.write_phonemes, "w") as phonemes_file:
+            with open(args.write_phonemes, "w", encoding="utf-8") as phonemes_file:
                 write_phoneme_ids(phoneme_to_id, phonemes_file)
 
     if args.write_phoneme_counts:
@@ -313,7 +313,7 @@ def main():
             print("")
             write_phoneme_counts(all_phoneme_counts)
         else:
-            with open(args.write_phoneme_counts, "w") as counts_file:
+            with open(args.write_phoneme_counts, "w", encoding="utf-8") as counts_file:
                 write_phoneme_counts(all_phoneme_counts, counts_file)
 
 
