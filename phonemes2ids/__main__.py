@@ -7,9 +7,9 @@ import sys
 import typing
 from collections import Counter
 
-from . import learn_phoneme_ids, phonemes2ids
-from .const import PUNCTUATION_MAP, STRESS, BlankBetween
-from .utils import load_phoneme_ids, load_phoneme_map
+from phonemes2ids import __version__, learn_phoneme_ids, phonemes2ids
+from phonemes2ids.const import PUNCTUATION_MAP, STRESS, BlankBetween
+from phonemes2ids.utils import load_phoneme_ids, load_phoneme_map
 
 _LOGGER = logging.getLogger("phonemes2ids")
 
@@ -38,6 +38,10 @@ def main():
     parser.add_argument("--eos", help="Phoneme to put at end of sentence")
     parser.add_argument(
         "--blank", help="Phoneme to put between words or tokens (see --blank-between)"
+    )
+    parser.add_argument(
+        "--blank-word",
+        help="Phoneme to put between words (when --blank-between tokens_and_words)",
     )
     parser.add_argument(
         "--blank-between",
@@ -120,6 +124,12 @@ def main():
         "--phoneme-map",
         help="Path to text file with FROM_PHONEME TO_PHONEME on each line",
     )
+    parser.add_argument(
+        "--fail-on-missing",
+        action="store_true",
+        help="Raise an error if a phoneme cannot be mapped to an id",
+    )
+    parser.add_argument("--no-learn", action="store_true", help="Disable id learning")
     parser.add_argument("--version", action="store_true", help="Print version and exit")
     parser.add_argument(
         "--debug", action="store_true", help="Print DEBUG messages to the console"
@@ -135,8 +145,6 @@ def main():
 
     if args.version:
         # Print version and exit
-        from . import __version__
-
         print(__version__)
         sys.exit(0)
 
@@ -164,21 +172,26 @@ def main():
         with open(args.read_phonemes, "r", encoding="utf-8") as phonemes_file:
             phoneme_to_id.update(load_phoneme_ids(phonemes_file))
 
-    if args.pad and (args.pad not in phoneme_to_id):
-        # Add pad symbol
-        phoneme_to_id[args.pad] = len(phoneme_to_id)
+    if not args.no_learn:
+        if args.pad and (args.pad not in phoneme_to_id):
+            # Add pad symbol
+            phoneme_to_id[args.pad] = len(phoneme_to_id)
 
-    if args.bos and (args.bos not in phoneme_to_id):
-        # Add BOS symbol
-        phoneme_to_id[args.bos] = len(phoneme_to_id)
+        if args.bos and (args.bos not in phoneme_to_id):
+            # Add BOS symbol
+            phoneme_to_id[args.bos] = len(phoneme_to_id)
 
-    if args.eos and (args.eos not in phoneme_to_id):
-        # Add EOS symbol
-        phoneme_to_id[args.eos] = len(phoneme_to_id)
+        if args.eos and (args.eos not in phoneme_to_id):
+            # Add EOS symbol
+            phoneme_to_id[args.eos] = len(phoneme_to_id)
 
-    if args.blank and (args.blank not in phoneme_to_id):
-        # Add blank symbol
-        phoneme_to_id[args.blank] = len(phoneme_to_id)
+        if args.blank and (args.blank not in phoneme_to_id):
+            # Add blank symbol
+            phoneme_to_id[args.blank] = len(phoneme_to_id)
+
+        if args.blank_word and (args.blank_word not in phoneme_to_id):
+            # Add blank symbol
+            phoneme_to_id[args.blank_word] = len(phoneme_to_id)
 
     separate: typing.Set[str] = set()
     if args.separate:
@@ -188,7 +201,7 @@ def main():
         # Add stress symbols
         for stress in sorted(STRESS):
             separate.add(stress)
-            if stress not in phoneme_to_id:
+            if (not args.no_learn) and (stress not in phoneme_to_id):
                 phoneme_to_id[stress] = len(phoneme_to_id)
 
     # -------------------------------------------------------------------------
@@ -235,22 +248,24 @@ def main():
 
         lines.append((line, word_phonemes))
 
-        # Accumulate phoneme set and counts
-        learn_phoneme_ids(
-            word_phonemes,
-            all_phonemes,
-            all_phoneme_counts=all_phoneme_counts,
-            simple_punctuation=args.simple_punctuation,
-            separate=separate,
-            separate_graphemes=args.separate_graphemes,
-            separate_tones=args.separate_tones,
-            phoneme_map=phoneme_map,
-        )
+        if not args.no_learn:
+            # Accumulate phoneme set and counts
+            learn_phoneme_ids(
+                word_phonemes,
+                all_phonemes,
+                all_phoneme_counts=all_phoneme_counts,
+                simple_punctuation=args.simple_punctuation,
+                separate=separate,
+                separate_graphemes=args.separate_graphemes,
+                separate_tones=args.separate_tones,
+                phoneme_map=phoneme_map,
+            )
 
-    # Assign phonemes to ids in sorted order
-    for phoneme in sorted(all_phonemes):
-        if phoneme not in phoneme_to_id:
-            phoneme_to_id[phoneme] = len(phoneme_to_id)
+    if not args.no_learn:
+        # Assign phonemes to ids in sorted order
+        for phoneme in sorted(all_phonemes):
+            if phoneme not in phoneme_to_id:
+                phoneme_to_id[phoneme] = len(phoneme_to_id)
 
     # -------------------------------------------------------------------------
 
@@ -268,6 +283,7 @@ def main():
             bos=args.bos,
             eos=args.eos,
             blank=args.blank,
+            blank_word=args.blank_word,
             blank_between=args.blank_between,
             blank_at_start=(not args.no_blank_start),
             blank_at_end=(not args.no_blank_end),
@@ -277,6 +293,7 @@ def main():
             separate_tones=args.separate_tones,
             tone_before=args.tone_before,
             phoneme_map=phoneme_map,
+            fail_on_missing=args.fail_on_missing,
         )
 
         phoneme_ids_str = args.id_separator.join(

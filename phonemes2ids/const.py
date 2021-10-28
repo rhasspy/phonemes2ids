@@ -17,3 +17,6 @@ class BlankBetween(str, Enum):
 
     WORDS = "words"
     """Blank between every word"""
+
+    TOKENS_AND_WORDS = "tokens_and_words"
+    """Blank between every token/phoneme and every word (may be different symbols)"""

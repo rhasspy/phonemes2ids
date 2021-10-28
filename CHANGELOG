@@ -1,0 +1,7 @@
+## [1.2]
+
+### Added
+
+- Blank phonemes between tokens and words (can be different phonemes with --blank-word)
+- Disable phoneme learning in with --no-learn
+- Fail on missing phoneme with --fail-on-missing

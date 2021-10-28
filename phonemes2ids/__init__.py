@@ -7,8 +7,7 @@ import typing
 import unicodedata
 from pathlib import Path
 
-from .const import PUNCTUATION_MAP, STRESS, BlankBetween
-from .utils import load_phoneme_ids, load_phoneme_map
+from phonemes2ids.const import PUNCTUATION_MAP, BlankBetween
 
 _LOGGER = logging.getLogger("phoneme_ids")
 _DIR = Path(__file__).parent
@@ -28,6 +27,7 @@ def phonemes2ids(
     bos: typing.Optional[str] = None,
     eos: typing.Optional[str] = None,
     blank: typing.Optional[str] = None,
+    blank_word: typing.Optional[str] = None,
     blank_between: typing.Union[str, BlankBetween] = BlankBetween.WORDS,
     blank_at_start: bool = True,
     blank_at_end: bool = True,
@@ -41,6 +41,7 @@ def phonemes2ids(
     missing_func: typing.Optional[
         typing.Callable[[str], typing.Optional[typing.List[int]]]
     ] = None,
+    fail_on_missing: bool = False,
 ) -> ID_LIST:
     """
     Convert word-separated phonemes into integer ids.
@@ -52,6 +53,7 @@ def phonemes2ids(
         bos: phoneme to put at beginning of id list
         eos: phoneme to put at end of id list
         blank: phoneme to add between words or tokens
+        blank_word: phoneme to add between words (when blank_between = "tokens_and_words")
         blank_between: controls where blank tokens are inserted (see const.BlankBetween)
         blank_at_start: True if blank should also be inserted before first word/token
         blank_at_end: True if blank should also be inserted after last word/token
@@ -63,6 +65,7 @@ def phonemes2ids(
         tone_before: True if tones separated out are inserted before their corresponding phoneme instead of after
         phoneme_map: optional map from phoneme to phoneme sequence (used after simplification/separation)
         missing_func: function called when phoneme is missing from phoneme_to_id map (str -> [int])
+        fail_on_missing: True if an error should occur when a phoneme cannot be mapped to an id
 
     Returns:
         ids - flat list of integer ids
@@ -82,8 +85,14 @@ def phonemes2ids(
         is_separate = functools.partial(operator.contains, separate)
 
     blank_id: typing.Optional[int] = None
+    blank_word_id: typing.Optional[int] = None
     if blank:
         blank_id = phoneme_to_id[blank]
+        blank_word_id = phoneme_to_id[blank]
+
+    if blank_word:
+        # Separate phoneme between words
+        blank_word_id = phoneme_to_id[blank_word]
 
     # Transform into phoneme ids
     word_phoneme_ids: WORD_ID_LIST = []
@@ -111,6 +120,10 @@ def phonemes2ids(
                     typing.cast(WORD_ID_LIST, target).append(maybe_ids)
                 else:
                     typing.cast(ID_LIST, target).extend(maybe_ids)
+                return
+
+        if fail_on_missing:
+            raise ValueError(f"No id for phoneme: {phoneme}")
 
     # Add beginning-of-sentence symbol
     if bos:
@@ -194,10 +207,16 @@ def phonemes2ids(
                 maybe_extend_ids(tone, word_ids, append_list=False)
 
         if word_ids:
-            if blank_id is None:
-                # No blank phoneme
-                word_phoneme_ids.append(word_ids)
-            elif blank_between == BlankBetween.TOKENS:
+            if (blank_word_id is not None) and (
+                blank_between in {BlankBetween.WORDS, BlankBetween.TOKENS_AND_WORDS}
+            ):
+                # Blank phoneme between each word (list of tokens)
+                if (word_idx != last_word_idx) or blank_at_end:
+                    word_ids.append(blank_word_id)
+
+            if (blank_id is not None) and (
+                blank_between in {BlankBetween.TOKENS, BlankBetween.TOKENS_AND_WORDS}
+            ):
                 # Blank phoneme between each token
                 num_blanks = len(word_ids)
                 word_phoneme_ids.append(
@@ -219,15 +238,9 @@ def phonemes2ids(
                 ):
                     # Drop last blank
                     word_phoneme_ids[-1].pop()
-
-            elif blank_between == BlankBetween.WORDS:
-                # Blank phoneme between each word (list of tokens)
-                word_phoneme_ids.append(word_ids)
-
-                if (word_idx != last_word_idx) or blank_at_end:
-                    word_phoneme_ids.append([blank_id])
             else:
-                raise ValueError(f"Unexpected value for blank_between: {blank_between}")
+                # No blanks between tokens
+                word_phoneme_ids.append(word_ids)
 
     # Add end-of-sentence symbol
     if eos:

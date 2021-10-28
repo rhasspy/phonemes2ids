@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Tests for phonemes2ids"""
 import unittest
-from collections import Counter
 
 from phonemes2ids import phonemes2ids, BlankBetween
 
@@ -73,6 +72,39 @@ class Phoneme2IdsTestCase(unittest.TestCase):
         )
 
         self.assertEqual(ids, [1, 4, 2, 4, 3, 4, 2, 4, 3, 4, 1])
+
+    def test_blank_between_tokens_and_words(self):
+        """Test blank symbols between tokens and words"""
+        word_phonemes = [["a"], ["b"], ["c"], ["b", "c", "a"]]
+        blank_token = "_"
+        blank_word = "#"
+        phoneme_to_id = {blank_token: 0, "a": 1, "b": 2, "c": 3, blank_word: 4}
+
+        ids = phonemes2ids(
+            word_phonemes=word_phonemes,
+            phoneme_to_id=phoneme_to_id,
+            blank=blank_token,
+            blank_word=blank_word,
+            blank_between=BlankBetween.TOKENS_AND_WORDS,
+        )
+
+        # between every phoneme (token) and word (different symbol)
+        self.assertEqual(
+            ids, [0, 1, 0, 4, 0, 2, 0, 4, 0, 3, 0, 4, 0, 2, 0, 3, 0, 1, 0, 4, 0],
+        )
+
+        # No blanks at start/end
+        ids = phonemes2ids(
+            word_phonemes=word_phonemes,
+            phoneme_to_id=phoneme_to_id,
+            blank=blank_token,
+            blank_word=blank_word,
+            blank_between=BlankBetween.TOKENS_AND_WORDS,
+            blank_at_start=False,
+            blank_at_end=False,
+        )
+
+        self.assertEqual(ids, [1, 0, 4, 0, 2, 0, 4, 0, 3, 0, 4, 0, 2, 0, 3, 0, 1])
 
     def test_bos_eos(self):
         """Test bos/eos symbols"""
