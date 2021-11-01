@@ -42,6 +42,7 @@ def phonemes2ids(
         typing.Callable[[str], typing.Optional[typing.List[int]]]
     ] = None,
     fail_on_missing: bool = False,
+    auto_bos_eos: bool = False,
 ) -> ID_LIST:
     """
     Convert word-separated phonemes into integer ids.
@@ -66,6 +67,7 @@ def phonemes2ids(
         phoneme_map: optional map from phoneme to phoneme sequence (used after simplification/separation)
         missing_func: function called when phoneme is missing from phoneme_to_id map (str -> [int])
         fail_on_missing: True if an error should occur when a phoneme cannot be mapped to an id
+        auto_bos_eos: True if bos/eos symbols should be automatically added
 
     Returns:
         ids - flat list of integer ids
@@ -126,7 +128,7 @@ def phonemes2ids(
             raise ValueError(f"No id for phoneme: {phoneme}")
 
     # Add beginning-of-sentence symbol
-    if bos:
+    if bos and auto_bos_eos:
         maybe_extend_ids(bos, word_phoneme_ids)
 
     if (blank_id is not None) and blank_at_start:
@@ -243,7 +245,7 @@ def phonemes2ids(
                 word_phoneme_ids.append(word_ids)
 
     # Add end-of-sentence symbol
-    if eos:
+    if eos and auto_bos_eos:
         maybe_extend_ids(eos, word_phoneme_ids)
 
     return list(itertools.chain.from_iterable(word_phoneme_ids))

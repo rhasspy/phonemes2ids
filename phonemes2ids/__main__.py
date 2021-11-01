@@ -299,17 +299,8 @@ def main():
             tone_before=args.tone_before,
             phoneme_map=phoneme_map,
             fail_on_missing=args.fail_on_missing,
+            auto_bos_eos=args.auto_bos_eos,
         )
-
-        if args.auto_bos_eos:
-            # Automatically add bos/eos symbols to sentence
-            if args.bos:
-                if not word_phoneme_ids or (word_phoneme_ids[0] != args.bos):
-                    word_phoneme_ids.insert(0, phoneme_to_id[args.bos])
-
-            if args.eos:
-                if not word_phoneme_ids or (word_phoneme_ids[-1] != args.eos):
-                    word_phoneme_ids.append(phoneme_to_id[args.eos])
 
         phoneme_ids_str = args.id_separator.join(
             (str(p_id) for p_id in word_phoneme_ids)
