@@ -7,7 +7,9 @@ import typing
 import unicodedata
 from pathlib import Path
 
+from phonemes2ids.const import STRESS  # pylint: disable=unused-import
 from phonemes2ids.const import PUNCTUATION_MAP, BlankBetween
+from phonemes2ids.utils import load_phoneme_ids  # pylint: disable=unused-import
 
 _LOGGER = logging.getLogger("phoneme_ids")
 _DIR = Path(__file__).parent
