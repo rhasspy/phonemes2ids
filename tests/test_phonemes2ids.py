@@ -114,7 +114,11 @@ class Phoneme2IdsTestCase(unittest.TestCase):
         phoneme_to_id = {"a": 1, "b": 2, "c": 3, bos: 4, eos: 5}
 
         ids = phonemes2ids(
-            word_phonemes=word_phonemes, phoneme_to_id=phoneme_to_id, bos=bos, eos=eos
+            word_phonemes=word_phonemes,
+            phoneme_to_id=phoneme_to_id,
+            bos=bos,
+            eos=eos,
+            auto_bos_eos=True,
         )
 
         self.assertEqual(ids, [4, 1, 2, 3, 2, 3, 1, 5])
