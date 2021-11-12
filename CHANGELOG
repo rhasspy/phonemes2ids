@@ -5,3 +5,4 @@
 - Blank phonemes between tokens and words (can be different phonemes with --blank-word)
 - Disable phoneme learning in with --no-learn
 - Fail on missing phoneme with --fail-on-missing
+- BOS/EOS symbols are only added automatically with --auto-bos-eos

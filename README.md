@@ -130,11 +130,12 @@ Now every other phoneme/token in the output is blank (`#` = 0).
 
 It's common to include pad, bos (beginning of sentence), and eos (end of sentence) symbols. These typically occupy the first few phoneme ids, especially the pad symbol which is almost always 0.
 
-You can have bos/eos added automatically:
+You can have bos/eos added automatically with `--auto-bos-eos`:
 
 ```sh
 echo 'a b c' | \
-    phonemes2ids --pad '_' --bos '^' --eos '$' \
+    phonemes2ids --auto-bos-eos \
+                 --pad '_' --bos '^' --eos '$' \
                  --write-phonemes phonemes.txt
 1 3 4 5 2
 ```
