@@ -37,6 +37,11 @@ def main():
     parser.add_argument("--bos", help="Phoneme to put at beginning of sentence")
     parser.add_argument("--eos", help="Phoneme to put at end of sentence")
     parser.add_argument(
+        "--auto-bos-eos",
+        action="store_true",
+        help="Automatically add bos/eos symbols to each sentence",
+    )
+    parser.add_argument(
         "--blank", help="Phoneme to put between words or tokens (see --blank-between)"
     )
     parser.add_argument(
@@ -294,6 +299,7 @@ def main():
             tone_before=args.tone_before,
             phoneme_map=phoneme_map,
             fail_on_missing=args.fail_on_missing,
+            auto_bos_eos=args.auto_bos_eos,
         )
 
         phoneme_ids_str = args.id_separator.join(
